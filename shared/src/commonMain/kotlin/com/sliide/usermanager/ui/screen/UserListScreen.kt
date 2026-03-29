@@ -28,6 +28,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -37,6 +38,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,6 +77,8 @@ fun UserListScreen(viewModel: UserListViewModel) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val listState = rememberLazyListState()
     var highlightedUserId by remember { mutableStateOf<Long?>(null) }
+    var isWideScreen by remember { mutableStateOf(false) }
+    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Hide FAB when scrolling down, show when scrolling up
     var previousScrollIndex by remember { mutableIntStateOf(0) }
@@ -178,7 +182,7 @@ fun UserListScreen(viewModel: UserListViewModel) {
         Box(modifier = Modifier.padding(paddingValues)) {
             // Adaptive layout based on screen width
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val isWideScreen = maxWidth > 600.dp
+                isWideScreen = maxWidth > 600.dp
 
                 if (isWideScreen) {
                     // Master-Detail layout
@@ -263,6 +267,21 @@ fun UserListScreen(viewModel: UserListViewModel) {
             onConfirm = { viewModel.onIntent(UserListIntent.ConfirmDelete) },
             onDismiss = { viewModel.onIntent(UserListIntent.CancelDelete) }
         )
+    }
+
+    // Portrait bottom sheet for user details
+    if (!isWideScreen && state.selectedUser != null) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.onIntent(UserListIntent.SelectUser(null)) },
+            sheetState = bottomSheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp
+        ) {
+            UserDetailPanel(
+                user = state.selectedUser,
+                onDeleteClick = { viewModel.onIntent(UserListIntent.RequestDelete(it)) }
+            )
+        }
     }
 }
 
