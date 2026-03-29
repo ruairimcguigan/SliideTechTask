@@ -1,10 +1,6 @@
 package com.sliide.usermanager.ui.screen
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -276,19 +272,16 @@ private fun UserListContent(
                         items = state.users,
                         key = { it.id }
                     ) { user ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn(tween(300)) + slideInVertically(tween(300)),
-                            exit = fadeOut(tween(200))
-                        ) {
-                            UserCard(
-                                user = user,
-                                isSelected = state.selectedUser?.id == user.id,
-                                onClick = { onUserClick(user) },
-                                onLongClick = { onUserLongClick(user) },
-                                modifier = Modifier.animateItem()
+                        UserCard(
+                            user = user,
+                            isSelected = state.selectedUser?.id == user.id,
+                            onClick = { onUserClick(user) },
+                            onLongClick = { onUserLongClick(user) },
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = tween(300),
+                                fadeOutSpec = tween(200)
                             )
-                        }
+                        )
                     }
                 }
             }
