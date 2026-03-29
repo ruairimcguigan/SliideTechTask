@@ -1,6 +1,10 @@
 package com.sliide.usermanager.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -11,9 +15,14 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -31,10 +40,14 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,7 +56,7 @@ import com.sliide.usermanager.ui.components.DeleteConfirmDialog
 import com.sliide.usermanager.ui.components.EmptyState
 import com.sliide.usermanager.ui.components.ErrorState
 import com.sliide.usermanager.ui.components.ShimmerUserList
-import com.sliide.usermanager.ui.components.UserCard
+import com.sliide.usermanager.ui.components.SwipeableUserCard
 import com.sliide.usermanager.ui.components.UserDetailPanel
 
 /**
@@ -59,6 +72,22 @@ fun UserListScreen(viewModel: UserListViewModel) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val listState = rememberLazyListState()
+
+    // Hide FAB when scrolling down, show when scrolling up
+    var previousScrollIndex by remember { mutableIntStateOf(0) }
+    var previousScrollOffset by remember { mutableIntStateOf(0) }
+    val isFabVisible by remember {
+        derivedStateOf {
+            val currentIndex = listState.firstVisibleItemIndex
+            val currentOffset = listState.firstVisibleItemScrollOffset
+            val scrollingDown = currentIndex > previousScrollIndex ||
+                (currentIndex == previousScrollIndex && currentOffset > previousScrollOffset)
+            previousScrollIndex = currentIndex
+            previousScrollOffset = currentOffset
+            !scrollingDown || currentIndex == 0
+        }
+    }
 
     // Collect side effects
     LaunchedEffect(Unit) {
@@ -115,15 +144,21 @@ fun UserListScreen(viewModel: UserListViewModel) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.onIntent(UserListIntent.ShowAddUserDialog) },
-                containerColor = MaterialTheme.colorScheme.primary
+            AnimatedVisibility(
+                visible = isFabVisible,
+                enter = slideInVertically(initialOffsetY = { it * 2 }),
+                exit = slideOutVertically(targetOffsetY = { it * 2 })
             ) {
-                Text(
-                    text = "+",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+                FloatingActionButton(
+                    onClick = { viewModel.onIntent(UserListIntent.ShowAddUserDialog) },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add user",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
         },
         snackbarHost = {
@@ -153,9 +188,11 @@ fun UserListScreen(viewModel: UserListViewModel) {
                         ) {
                             UserListContent(
                                 state = state,
+                                listState = listState,
                                 onRefresh = { viewModel.onIntent(UserListIntent.RefreshUsers) },
                                 onUserClick = { viewModel.onIntent(UserListIntent.SelectUser(it)) },
                                 onUserLongClick = { viewModel.onIntent(UserListIntent.RequestDelete(it)) },
+                                onUserSwipeDelete = { viewModel.onIntent(UserListIntent.RequestDelete(it)) },
                                 onRetry = { viewModel.onIntent(UserListIntent.LoadUsers) }
                             )
                         }
@@ -184,9 +221,11 @@ fun UserListScreen(viewModel: UserListViewModel) {
                     // Single column (portrait)
                     UserListContent(
                         state = state,
+                        listState = listState,
                         onRefresh = { viewModel.onIntent(UserListIntent.RefreshUsers) },
                         onUserClick = { viewModel.onIntent(UserListIntent.SelectUser(it)) },
                         onUserLongClick = { viewModel.onIntent(UserListIntent.RequestDelete(it)) },
+                        onUserSwipeDelete = { viewModel.onIntent(UserListIntent.RequestDelete(it)) },
                         onRetry = { viewModel.onIntent(UserListIntent.LoadUsers) }
                     )
                 }
@@ -227,9 +266,11 @@ fun UserListScreen(viewModel: UserListViewModel) {
 @Composable
 private fun UserListContent(
     state: UserListState,
+    listState: androidx.compose.foundation.lazy.LazyListState,
     onRefresh: () -> Unit,
     onUserClick: (com.sliide.usermanager.domain.model.User) -> Unit,
     onUserLongClick: (com.sliide.usermanager.domain.model.User) -> Unit,
+    onUserSwipeDelete: (com.sliide.usermanager.domain.model.User) -> Unit,
     onRetry: () -> Unit
 ) {
     when {
@@ -259,6 +300,7 @@ private fun UserListContent(
                 modifier = Modifier.fillMaxSize()
             ) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
@@ -272,15 +314,31 @@ private fun UserListContent(
                         items = state.users,
                         key = { it.id }
                     ) { user ->
-                        UserCard(
+                        val index = state.users.indexOf(user)
+
+                        // Staggered entry: each card fades and slides in with a slight delay
+                        val animProgress = remember { Animatable(0f) }
+                        LaunchedEffect(user.id) {
+                            kotlinx.coroutines.delay(index.coerceAtMost(10) * 50L)
+                            animProgress.animateTo(1f, animationSpec = tween(350))
+                        }
+
+                        SwipeableUserCard(
                             user = user,
                             isSelected = state.selectedUser?.id == user.id,
+                            showSwipeHint = index == 0,
                             onClick = { onUserClick(user) },
                             onLongClick = { onUserLongClick(user) },
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = tween(300),
-                                fadeOutSpec = tween(200)
-                            )
+                            onDelete = { onUserSwipeDelete(user) },
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    alpha = animProgress.value
+                                    translationY = (1f - animProgress.value) * 40f
+                                }
+                                .animateItem(
+                                    fadeInSpec = tween(300),
+                                    fadeOutSpec = tween(200)
+                                )
                         )
                     }
                 }
