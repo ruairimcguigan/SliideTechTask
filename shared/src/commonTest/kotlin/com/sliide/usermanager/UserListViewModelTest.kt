@@ -250,6 +250,124 @@ class UserListViewModelTest {
 
         assertNull(viewModel.state.value.error)
     }
+
+    @Test
+    fun confirmDelete_success_emitsUndoSnackbar() = runTest {
+        fakeRepository.refreshResult = Result.Success(listOf(testUser))
+        fakeRepository.usersFlow.value = listOf(testUser)
+        fakeRepository.deleteResult = Result.Success(Unit)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(UserListIntent.RequestDelete(testUser))
+        viewModel.onIntent(UserListIntent.ConfirmDelete)
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.deleteConfirmUser)
+        val effect = viewModel.effects.first()
+        assertTrue(effect is UserListEffect.ShowUndoSnackbar)
+        assertEquals(testUser, (effect as UserListEffect.ShowUndoSnackbar).user)
+    }
+
+    @Test
+    fun confirmDelete_error_emitsErrorSnackbar() = runTest {
+        fakeRepository.refreshResult = Result.Success(listOf(testUser))
+        fakeRepository.usersFlow.value = listOf(testUser)
+        fakeRepository.deleteResult = Result.Error(AppException.ServerError)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(UserListIntent.RequestDelete(testUser))
+        viewModel.onIntent(UserListIntent.ConfirmDelete)
+        advanceUntilIdle()
+
+        val effect = viewModel.effects.first()
+        assertTrue(effect is UserListEffect.ShowSnackbar)
+    }
+
+    @Test
+    fun confirmDelete_clearsSelectedUser_ifDeletedUserWasSelected() = runTest {
+        fakeRepository.refreshResult = Result.Success(listOf(testUser))
+        fakeRepository.usersFlow.value = listOf(testUser)
+        fakeRepository.deleteResult = Result.Success(Unit)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(UserListIntent.SelectUser(testUser))
+        viewModel.onIntent(UserListIntent.RequestDelete(testUser))
+        viewModel.onIntent(UserListIntent.ConfirmDelete)
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.selectedUser)
+    }
+
+    @Test
+    fun submitNewUser_error_dismissesDialogAndShowsSnackbar() = runTest {
+        fakeRepository.refreshResult = Result.Success(emptyList())
+        fakeRepository.createResult = Result.Error(AppException.Unknown("email: has already been taken"))
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(UserListIntent.ShowAddUserDialog)
+        viewModel.onIntent(UserListIntent.UpdateFormName("John Doe"))
+        viewModel.onIntent(UserListIntent.UpdateFormEmail("john@example.com"))
+        viewModel.onIntent(UserListIntent.SubmitNewUser)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isAddUserDialogVisible)
+        assertFalse(viewModel.state.value.isCreatingUser)
+    }
+
+    @Test
+    fun undoDelete_restoresUser() = runTest {
+        fakeRepository.refreshResult = Result.Success(emptyList())
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(UserListIntent.UndoDelete(testUser))
+        advanceUntilIdle()
+
+        assertTrue(fakeRepository.usersFlow.value.contains(testUser))
+    }
+
+    @Test
+    fun refresh_success_clearsRefreshingState() = runTest {
+        fakeRepository.refreshResult = Result.Success(listOf(testUser))
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(UserListIntent.RefreshUsers)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isRefreshing)
+    }
+
+    @Test
+    fun refresh_error_showsSnackbar() = runTest {
+        fakeRepository.refreshResult = Result.Success(emptyList())
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        fakeRepository.refreshResult = Result.Error(AppException.NetworkError)
+        viewModel.onIntent(UserListIntent.RefreshUsers)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isRefreshing)
+        val effect = viewModel.effects.first()
+        assertTrue(effect is UserListEffect.ShowSnackbar)
+    }
+
+    @Test
+    fun updateFormGender_updatesState() = runTest {
+        fakeRepository.refreshResult = Result.Success(emptyList())
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(UserListIntent.ShowAddUserDialog)
+        viewModel.onIntent(UserListIntent.UpdateFormGender("female"))
+
+        assertEquals("female", viewModel.state.value.formGender)
+    }
 }
 
 // ─── Fake Repository ─────────────────────────────────────────
