@@ -45,7 +45,7 @@ data class UserListState(
 sealed class UserListEffect {
     data class ShowSnackbar(val message: String) : UserListEffect()
     data class ShowUndoSnackbar(val user: User, val message: String) : UserListEffect()
-    data object UserCreatedSuccess : UserListEffect()
+    data class UserCreatedSuccess(val userId: Long) : UserListEffect()
 }
 
 // ─── MVI Intents ─────────────────────────────────────────────
@@ -230,7 +230,7 @@ class UserListViewModel(
                             isAddUserDialogVisible = false
                         )
                     }
-                    _effects.emit(UserListEffect.UserCreatedSuccess)
+                    _effects.emit(UserListEffect.UserCreatedSuccess(result.data.id))
                     _effects.emit(UserListEffect.ShowSnackbar("User created successfully!"))
                 }
                 is Result.Error -> {

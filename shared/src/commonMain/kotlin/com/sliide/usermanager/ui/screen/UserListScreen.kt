@@ -43,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,6 +74,7 @@ fun UserListScreen(viewModel: UserListViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val listState = rememberLazyListState()
+    var highlightedUserId by remember { mutableStateOf<Long?>(null) }
 
     // Hide FAB when scrolling down, show when scrolling up
     var previousScrollIndex by remember { mutableIntStateOf(0) }
@@ -110,7 +112,8 @@ fun UserListScreen(viewModel: UserListViewModel) {
                     }
                 }
                 is UserListEffect.UserCreatedSuccess -> {
-                    // Handled by ShowSnackbar effect
+                    listState.animateScrollToItem(0)
+                    highlightedUserId = effect.userId
                 }
             }
         }
@@ -189,6 +192,8 @@ fun UserListScreen(viewModel: UserListViewModel) {
                             UserListContent(
                                 state = state,
                                 listState = listState,
+                                highlightedUserId = highlightedUserId,
+                                onHighlightConsumed = { highlightedUserId = null },
                                 onRefresh = { viewModel.onIntent(UserListIntent.RefreshUsers) },
                                 onUserClick = { viewModel.onIntent(UserListIntent.SelectUser(it)) },
                                 onUserLongClick = { viewModel.onIntent(UserListIntent.RequestDelete(it)) },
@@ -222,6 +227,8 @@ fun UserListScreen(viewModel: UserListViewModel) {
                     UserListContent(
                         state = state,
                         listState = listState,
+                        highlightedUserId = highlightedUserId,
+                        onHighlightConsumed = { highlightedUserId = null },
                         onRefresh = { viewModel.onIntent(UserListIntent.RefreshUsers) },
                         onUserClick = { viewModel.onIntent(UserListIntent.SelectUser(it)) },
                         onUserLongClick = { viewModel.onIntent(UserListIntent.RequestDelete(it)) },
@@ -267,6 +274,8 @@ fun UserListScreen(viewModel: UserListViewModel) {
 private fun UserListContent(
     state: UserListState,
     listState: androidx.compose.foundation.lazy.LazyListState,
+    highlightedUserId: Long?,
+    onHighlightConsumed: () -> Unit,
     onRefresh: () -> Unit,
     onUserClick: (com.sliide.usermanager.domain.model.User) -> Unit,
     onUserLongClick: (com.sliide.usermanager.domain.model.User) -> Unit,
@@ -323,10 +332,25 @@ private fun UserListContent(
                             animProgress.animateTo(1f, animationSpec = tween(350))
                         }
 
+                        // Shake animation for newly created user
+                        val shakeOffset = remember { Animatable(0f) }
+                        val isHighlighted = highlightedUserId == user.id
+                        LaunchedEffect(isHighlighted) {
+                            if (isHighlighted) {
+                                kotlinx.coroutines.delay(200) // wait for scroll to settle
+                                repeat(3) {
+                                    shakeOffset.animateTo(8f, animationSpec = tween(60))
+                                    shakeOffset.animateTo(-8f, animationSpec = tween(60))
+                                }
+                                shakeOffset.animateTo(0f, animationSpec = tween(60))
+                                onHighlightConsumed()
+                            }
+                        }
+
                         SwipeableUserCard(
                             user = user,
                             isSelected = state.selectedUser?.id == user.id,
-                            showSwipeHint = index == 0,
+                            showSwipeHint = index == 0 && highlightedUserId == null,
                             onClick = { onUserClick(user) },
                             onLongClick = { onUserLongClick(user) },
                             onDelete = { onUserSwipeDelete(user) },
@@ -334,6 +358,7 @@ private fun UserListContent(
                                 .graphicsLayer {
                                     alpha = animProgress.value
                                     translationY = (1f - animProgress.value) * 40f
+                                    translationX = shakeOffset.value
                                 }
                                 .animateItem(
                                     fadeInSpec = tween(300),
