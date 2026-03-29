@@ -1,0 +1,29 @@
+CREATE TABLE UserEntity (
+    id INTEGER NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    gender TEXT NOT NULL DEFAULT 'male',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at INTEGER NOT NULL
+);
+
+-- Queries used by the repository
+
+getAllUsers:
+SELECT * FROM UserEntity ORDER BY created_at DESC;
+
+getUserById:
+SELECT * FROM UserEntity WHERE id = ?;
+
+insertUser:
+INSERT OR REPLACE INTO UserEntity(id, name, email, gender, status, created_at)
+VALUES (?, ?, ?, ?, ?, ?);
+
+deleteUser:
+DELETE FROM UserEntity WHERE id = ?;
+
+deleteAllUsers:
+DELETE FROM UserEntity;
+
+countUsers:
+SELECT COUNT(*) FROM UserEntity;
