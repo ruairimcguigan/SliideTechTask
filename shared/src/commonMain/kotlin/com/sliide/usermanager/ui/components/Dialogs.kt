@@ -1,6 +1,5 @@
 package com.sliide.usermanager.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,9 +19,16 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 
 /**
@@ -30,6 +36,9 @@ import androidx.compose.ui.unit.dp
  * - Real-time name and email validation
  * - Gender radio group
  * - Loading state during API call
+ *
+ * Uses local TextFieldValue state to avoid cursor desync on iOS,
+ * syncing text back to the ViewModel on each change.
  */
 @Composable
 fun AddUserDialog(
@@ -45,6 +54,26 @@ fun AddUserDialog(
     onSubmit: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Local TextFieldValue state preserves cursor position on iOS
+    var nameFieldValue by remember {
+        mutableStateOf(TextFieldValue(name, TextRange(name.length)))
+    }
+    var emailFieldValue by remember {
+        mutableStateOf(TextFieldValue(email, TextRange(email.length)))
+    }
+
+    // Sync external changes (e.g. dialog reset) back to local state
+    LaunchedEffect(name) {
+        if (name != nameFieldValue.text) {
+            nameFieldValue = TextFieldValue(name, TextRange(name.length))
+        }
+    }
+    LaunchedEffect(email) {
+        if (email != emailFieldValue.text) {
+            emailFieldValue = TextFieldValue(email, TextRange(email.length))
+        }
+    }
+
     AlertDialog(
         onDismissRequest = { if (!isCreating) onDismiss() },
         title = {
@@ -60,19 +89,17 @@ fun AddUserDialog(
             ) {
                 // Name field with validation
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = onNameChange,
+                    value = nameFieldValue,
+                    onValueChange = {
+                        nameFieldValue = it
+                        onNameChange(it.text)
+                    },
                     label = { Text("Full Name") },
                     placeholder = { Text("e.g. John Smith") },
                     isError = nameError != null,
-                    supportingText = {
-                        AnimatedVisibility(visible = nameError != null) {
-                            Text(
-                                text = nameError ?: "",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    },
+                    supportingText = if (nameError != null) {
+                        { Text(text = nameError, color = MaterialTheme.colorScheme.error) }
+                    } else null,
                     singleLine = true,
                     enabled = !isCreating,
                     modifier = Modifier.fillMaxWidth()
@@ -80,19 +107,17 @@ fun AddUserDialog(
 
                 // Email field with validation
                 OutlinedTextField(
-                    value = email,
-                    onValueChange = onEmailChange,
+                    value = emailFieldValue,
+                    onValueChange = {
+                        emailFieldValue = it
+                        onEmailChange(it.text)
+                    },
                     label = { Text("Email Address") },
                     placeholder = { Text("e.g. john@example.com") },
                     isError = emailError != null,
-                    supportingText = {
-                        AnimatedVisibility(visible = emailError != null) {
-                            Text(
-                                text = emailError ?: "",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    },
+                    supportingText = if (emailError != null) {
+                        { Text(text = emailError, color = MaterialTheme.colorScheme.error) }
+                    } else null,
                     singleLine = true,
                     enabled = !isCreating,
                     modifier = Modifier.fillMaxWidth()
@@ -141,7 +166,7 @@ fun AddUserDialog(
         confirmButton = {
             Button(
                 onClick = onSubmit,
-                enabled = !isCreating && name.isNotBlank() && email.isNotBlank()
+                enabled = !isCreating && nameFieldValue.text.isNotBlank() && emailFieldValue.text.isNotBlank()
                     && nameError == null && emailError == null
             ) {
                 if (isCreating) {

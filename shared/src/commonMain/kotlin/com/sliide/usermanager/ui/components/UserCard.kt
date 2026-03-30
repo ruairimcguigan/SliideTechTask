@@ -73,6 +73,13 @@ fun SwipeableUserCard(
         }
     )
 
+    // Reset dismiss state if it gets stuck after confirmValueChange returns false
+    LaunchedEffect(dismissState.currentValue) {
+        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+            dismissState.reset()
+        }
+    }
+
     // Peek hint animation: nudge the first card left briefly to reveal the red background
     val peekOffset = remember { Animatable(0f) }
     val peekPx = with(LocalDensity.current) { 64.dp.toPx() }

@@ -4,7 +4,6 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -35,14 +34,8 @@ class GoRestApiService {
             })
         }
 
-        install(Logging) {
-            level = LogLevel.HEADERS
-        }
-
         install(HttpTimeout) {
             requestTimeoutMillis = 15_000
-            connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 10_000
         }
 
         defaultRequest {
@@ -113,10 +106,11 @@ class GoRestApiService {
 
     /**
      * Delete a user by ID.
-     * @return true if successful (HTTP 204).
+     * @return true if successful (HTTP 204) or already gone (HTTP 404).
      */
     suspend fun deleteUser(userId: Long): Boolean {
         val response: HttpResponse = client.delete("$BASE_URL/users/$userId")
-        return response.status == HttpStatusCode.NoContent
+        return response.status == HttpStatusCode.NoContent ||
+            response.status == HttpStatusCode.NotFound
     }
 }

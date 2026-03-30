@@ -138,15 +138,16 @@ fun UserListScreen(viewModel: UserListViewModel) {
                             Text(
                                 text = "${state.users.size} users",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                             )
                         }
                     }
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    scrolledContainerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
@@ -158,7 +159,8 @@ fun UserListScreen(viewModel: UserListViewModel) {
             ) {
                 FloatingActionButton(
                     onClick = { viewModel.onIntent(UserListIntent.ShowAddUserDialog) },
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    shape = androidx.compose.foundation.shape.CircleShape
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -270,7 +272,7 @@ fun UserListScreen(viewModel: UserListViewModel) {
     }
 
     // Portrait bottom sheet for user details
-    if (!isWideScreen && state.selectedUser != null) {
+    if (!isWideScreen && state.selectedUser != null && state.deleteConfirmUser == null) {
         ModalBottomSheet(
             onDismissRequest = { viewModel.onIntent(UserListIntent.SelectUser(null)) },
             sheetState = bottomSheetState,
@@ -279,7 +281,9 @@ fun UserListScreen(viewModel: UserListViewModel) {
         ) {
             UserDetailPanel(
                 user = state.selectedUser,
-                onDeleteClick = { viewModel.onIntent(UserListIntent.RequestDelete(it)) }
+                onDeleteClick = {
+                    viewModel.onIntent(UserListIntent.RequestDelete(it))
+                }
             )
         }
     }

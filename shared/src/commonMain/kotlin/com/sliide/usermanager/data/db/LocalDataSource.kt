@@ -5,7 +5,6 @@ import app.cash.sqldelight.coroutines.mapToList
 import com.sliide.usermanager.db.UserDatabase
 import com.sliide.usermanager.db.UserEntity
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -22,7 +21,9 @@ class LocalDataSource(driverFactory: DatabaseDriverFactory) {
      * Emits automatically whenever the underlying table changes.
      */
     fun observeAll(): Flow<List<UserEntity>> {
-        return queries.getAllUsers().asFlow().mapToList(Dispatchers.IO)
+        return queries.getAllUsers()
+            .asFlow()
+            .mapToList(Dispatchers.Main)
     }
 
     fun getAll(): List<UserEntity> {

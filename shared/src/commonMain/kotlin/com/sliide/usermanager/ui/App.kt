@@ -2,10 +2,12 @@ package com.sliide.usermanager.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import com.sliide.usermanager.ui.screen.UserListScreen
 import com.sliide.usermanager.ui.screen.UserListViewModel
 import com.sliide.usermanager.ui.theme.SliideTheme
-import org.koin.compose.koinInject
+import org.koin.compose.KoinContext
+import org.koin.mp.KoinPlatform
 
 /**
  * Root composable — the single entry point for the shared UI.
@@ -13,8 +15,8 @@ import org.koin.compose.koinInject
  */
 @Composable
 fun App() {
-    SliideTheme {
-        val viewModel: UserListViewModel = koinInject()
+    KoinContext {
+        val viewModel = remember { KoinPlatform.getKoin().get<UserListViewModel>() }
 
         DisposableEffect(Unit) {
             onDispose {
@@ -22,6 +24,8 @@ fun App() {
             }
         }
 
-        UserListScreen(viewModel = viewModel)
+        SliideTheme {
+            UserListScreen(viewModel = viewModel)
+        }
     }
 }

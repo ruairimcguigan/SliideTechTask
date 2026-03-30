@@ -5,7 +5,7 @@ import com.sliide.usermanager.di.sharedModule
 import org.koin.core.context.startKoin
 
 /**
- * Called from Swift's App delegate to initialize Koin.
+ * Called from Swift's AppDelegate to initialize Koin.
  * iOS doesn't have an Application class, so we expose this helper.
  */
 fun initKoin() {
