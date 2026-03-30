@@ -2,7 +2,7 @@
 
 A high-fidelity, cross-platform User Management System built with **Kotlin Multiplatform** and **Compose Multiplatform**, interfacing with the [GoRest Public API](https://gorest.co.in/).
 
-## 🎬 Features
+## Features
 
 | Feature | Implementation |
 |---|---|
@@ -17,7 +17,7 @@ A high-fidelity, cross-platform User Management System built with **Kotlin Multi
 | **Dark Mode** | Full Material 3 dynamic color scheme with light/dark support |
 | **UX Polish** | Staggered list entry animations, Material icons throughout, rounded cards with depth, scroll-aware FAB |
 
-## 🏗 Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -79,7 +79,7 @@ This ensures unidirectional data flow and makes the ViewModel trivially testable
 3. **Writes** (create/delete) hit the API first, then sync locally on success
 4. **Undo** restores local state without an API call
 
-## 🧰 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -92,7 +92,11 @@ This ensures unidirectional data flow and makes the ViewModel trivially testable
 | **Time** | kotlinx-datetime (shared relative timestamps) |
 | **Testing** | kotlin-test, Turbine, Ktor MockEngine |
 
-## 🧪 Testing
+## Video Demo
+
+
+
+## Testing
 
 Tests live in `shared/src/commonTest/` and cover:
 
@@ -105,7 +109,7 @@ Run tests:
 ./gradlew :shared:allTests
 ```
 
-## 🚀 Setup & Run
+## Setup & Run
 
 ### Prerequisites
 - Android Studio Hedgehog+ with KMP plugin
