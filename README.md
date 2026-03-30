@@ -94,7 +94,7 @@ This ensures unidirectional data flow and makes the ViewModel trivially testable
 
 ## Video Demo
 
-
+https://github.com/user-attachments/assets/a5b94e08-de46-4d78-8fcf-e611ab357914
 
 ## Testing
 
